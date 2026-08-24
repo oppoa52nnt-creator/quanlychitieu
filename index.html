@@ -3,108 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Tài Chính & Cho Mượn Theo Tháng</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-gradient-to-br from-gray-100 to-gray-200 min-h-screen p-3 sm:p-4 md:p-6">
-    <div class="max-w-3xl mx-auto">
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 mb-6 text-center">Quản Lý Chi Tiêu</h1>
+<body class="bg-slate-50 text-slate-800 font-sans">
 
-        <div x-data="{
-            savings: 0,
-            investment: 25000,
-            lending: 0,
-            interestSavings: 700000,
-            get total() { return this.savings + this.investment + this.lending + this.interestSavings }
-        }" class="space-y-3">
-            <!-- Tiết kiệm -->
-            <div x-data="{ open: false }" class="bg-white rounded-2xl shadow-sm border-l-4 border-green-500 overflow-hidden">
-                <button @click="open = !open" class="w-full p-4 sm:p-5 flex justify-between items-center gap-3">
-                    <span class="font-semibold text-gray-700 text-left">Tiết kiệm học tập</span>
-                    <span class="text-green-600 font-bold whitespace-nowrap" x-text="savings.toLocaleString('vi-VN') + 'đ'"></span>
-                </button>
-
-                <div x-show="open" x-transition class="bg-green-50 p-4 border-t border-green-100 space-y-3">
-                    <div class="bg-white p-3 rounded-xl shadow-sm border border-green-200">
-                        <p class="font-bold text-gray-800">Tiền Học Thêm kì 1</p>
-                        <p class="text-sm text-gray-600">Muc tiêu: 2.500.000đ</p>
-                        <p class="text-sm text-gray-600">Số tiền hiện tại: 0đ</p>
-                    </div>
-                    <div class="bg-white p-3 rounded-xl shadow-sm border border-green-200">
-                        <p class="font-bold text-gray-800">Tiền Học thêm kì 2</p>
-                        <p class="text-sm text-gray-600">Muc tiêu: 2.500.000đ</p>
-                        <p class="text-sm text-gray-600">Số tiền hiện tại: 0đ</p>
-                    </div>
-                    <div class="bg-white p-3 rounded-xl shadow-sm border border-green-200">
-                        <p class="font-bold text-gray-800">Tiền Quỷ & Chi Tiêu Khác</p>
-                        <p class="text-sm text-gray-600">Muc tiêu: 1.000.000đ</p>
-                        <p class="text-sm text-gray-600">Số tiền hiện tại: 0đ</p>
-                    </div>
-                </div>
+    <div class="max-w-4xl mx-auto p-4 sm:p-6">
+        <!-- Header & Chọn tháng -->
+        <header class="mb-6 flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100 gap-4">
+            <h1 class="text-2xl font-bold text-indigo-600 flex items-center"><i class="fa-solid fa-wallet mr-2"></i>Quản Lý Tài Chính</h1>
+            
+            <!-- Bộ lọc chọn tháng -->
+            <div class="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-xl">
+                <label for="monthSelector" class="text-sm font-semibold text-slate-600"><i class="fa-solid fa-calendar-days mr-1"></i> Chọn tháng:</label>
+                <input type="month" id="monthSelector" class="bg-white px-2 py-1 rounded-lg text-sm font-medium border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" onchange="changeMonth()">
             </div>
 
-            <!-- Đầu tư -->
-            <div x-data="{ open: false }" class="bg-white rounded-2xl shadow-sm border-l-4 border-yellow-500 overflow-hidden">
-                <button @click="open = !open" class="w-full p-4 sm:p-5 flex justify-between items-center gap-3">
-                    <span class="font-semibold text-gray-700 text-left">Đầu tư kinh doanh</span>
-                    <span class="text-yellow-600 font-bold whitespace-nowrap" x-text="investment.toLocaleString('vi-VN') + 'đ'"></span>
-                </button>
-
-                <div x-show="open" x-transition class="bg-yellow-50 p-4 border-t border-yellow-100 space-y-3">
-                    <div class="bg-white p-3 rounded-xl shadow-sm border border-yellow-200">
-                        <p class="font-bold text-gray-800">Thuê API Bank Subvip123.top</p>
-                        <p class="text-sm text-gray-600">Số tiền: 25.000đđ</p>
-                        <p class="text-sm text-gray-600">Trạng thái: Đang triển khai</p>
-                        <p class="text-sm text-gray-600">Thời Hạn Còn Lại 6 Ngày</p>
-                        <p class="text-sm text-gray-600">Số tiền hiện tại : 25.000đ</p>
-                    </div>
-                </div>
+            <div class="flex gap-2">
+                <button onclick="exportData()" class="bg-emerald-50 text-emerald-600 px-3 py-2 rounded-xl text-sm font-medium hover:bg-emerald-100 transition"><i class="fa-solid fa-download mr-1"></i> Xuất</button>
+                <label class="bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl text-sm font-medium hover:bg-indigo-100 transition cursor-pointer">
+                    <i class="fa-solid fa-upload mr-1"></i> Nhập <input type="file" id="importFile" class="hidden" onchange="importData(event)">
+                </label>
             </div>
+        </header>
 
-            <!-- Cho vay -->
-            <div x-data="{ open: false }" class="bg-white rounded-2xl shadow-sm border-l-4 border-blue-500 overflow-hidden">
-                <button @click="open = !open" class="w-full p-4 sm:p-5 flex justify-between items-center gap-3">
-                    <span class="font-semibold text-gray-700 text-left">Danh sách cho vay</span>
-                    <span class="text-blue-600 font-bold whitespace-nowrap" x-text="lending.toLocaleString('vi-VN') + 'đ'"></span>
-                </button>
-
-                <div x-show="open" x-transition class="bg-blue-50 p-4 border-t border-blue-100 space-y-3">
-                    <div class="bg-white p-3 rounded-xl shadow-sm border border-blue-200">
-                        <p class="font-bold text-gray-800">Bùi Hữu Trọng</p>
-                        <p class="text-sm text-gray-600">Ghi chú : Học chung lớp</p>
-                        <p class="text-sm text-gray-600">Số tiền: 70.000đ | Lãi: 0%</p>
-                        <p class="text-sm text-gray-600">Thời gian: 19:44 -11/07/2026 - Đã Thanh Toán 24/08/2026</p>
-                    </div>
+        <!-- Thống kê nhanh theo tháng -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-400 font-medium" id="labelTotalDebt">Tiền cho mượn (Chưa trả)</p>
+                    <h3 id="totalDebt" class="text-2xl font-bold text-rose-500 mt-1">0 đ</h3>
                 </div>
+                <div class="w-12 h-12 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center text-xl"><i class="fa-solid fa-hand-holding-dollar"></i></div>
             </div>
-
-            <!-- Tiết kiệm và sinh lãi -->
-            <div x-data="{ open: false }" class="bg-white rounded-2xl shadow-sm border-l-4 border-pink-500 overflow-hidden">
-                <button @click="open = !open" class="w-full p-4 sm:p-5 flex justify-between items-center gap-3">
-                    <span class="font-semibold text-gray-700 text-left">Tiết kiệm và sinh lãi</span>
-                    <span class="text-pink-600 font-bold whitespace-nowrap" x-text="interestSavings.toLocaleString('vi-VN') + 'đ'"></span>
-                </button>
-
-                <div x-show="open" x-transition class="bg-pink-50 p-4 border-t border-pink-100 space-y-3">
-                    <div class="bg-white p-3 rounded-xl shadow-sm border border-pink-200">
-                        <p class="font-bold text-gray-800">Khoảng Tiền Măt Tiết Kiệm</p>
-                        <p class="font-bold text-gray-800">Số tiền: 700.000đ</p>
-                        <p class="font-bold text-gray-600">Trạng thái : Đang giữ tiền mặt</p>
-                        
-                    </div>
-                    
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-slate-400 font-medium" id="labelTotalExp">Chi tiêu trong tháng</p>
+                    <h3 id="totalExpense" class="text-2xl font-bold text-indigo-600 mt-1">0 đ</h3>
                 </div>
-            </div>
-
-            <!-- Tổng tiền -->
-            <div class="mt-6 rounded-3xl shadow-2xl overflow-hidden border border-sky-200 bg-gradient-to-r from-white via-sky-50 to-sky-100">
-                <div class="p-5 sm:p-6 md:p-7 text-center">
-                    <p class="text-sm sm:text-base font-semibold text-sky-700">Tổng tiền</p>
-                    <p class="mt-2 text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-sky-600" x-text="total.toLocaleString('vi-VN') + 'đ'"></p>
-                    <p class="mt-2 text-xs sm:text-sm text-sky-500">CỐ GẮNG THÀNH CÔNG TRƯỚC 25 TUỔI</p>
-                </div>
+                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl"><i class="fa-solid fa-cart-shopping"></i></div>
             </div>
         </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            <!-- Quản lý cho mượn -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="text-lg font-bold mb-4 text-slate-700"><i class="fa-solid fa-users mr-2 text-indigo-500"></i>Cho mượn tiền</h2>
+                <form id="debtForm" onsubmit="addDebt(event)" class="space-y-3 mb-4">
+                    <input type="text" id="debtorName" placeholder="Tên người mượn" required class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    <input type="number" id="debtAmount" placeholder="Số tiền (VNĐ)" required class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    <input type="text" id="debtNote" placeholder="Ghi chú (VD: Mượn đóng học phí)" class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-xl text-sm font-medium hover:bg-indigo-700 transition">Thêm khoản mượn</button>
+                </form>
+                <div class="overflow-y-auto max-h-60 space-y-2" id="debtList">
+                    <!-- Danh sách đổ vào đây -->
+                </div>
+            </div>
+
+            <!-- Quản lý chi tiêu -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
+                <h2 class="text-lg font-bold mb-4 text-slate-700"><i class="fa-solid fa-receipt mr-2 text-indigo-500"></i>Sổ chi tiêu</h2>
+                <form id="expenseForm" onsubmit="addExpense(event)" class="space-y-3 mb-4">
+                    <input type="text" id="expTitle" placeholder="Tên khoản chi (VD: Ăn sáng, Mua server...)" required class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    <input type="number" id="expAmount" placeholder="Số tiền (VNĐ)" required class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-xl text-sm font-medium hover:bg-indigo-700 transition">Thêm chi tiêu</button>
+                </form>
+                <div class="overflow-y-auto max-h-60 space-y-2" id="expenseList">
+                    <!-- Danh sách đổ vào đây -->
+                </div>
+            </div>
+
+        </div>
     </div>
+
+    <script>
+        let debts = JSON.parse(localStorage.getItem('my_debts')) || [];
+        let expenses = JSON.parse(localStorage.getItem('my_expenses')) || [];
+
+        const monthSelector = document.getElementById('monthSelector');
+        const currentDate = new Date();
+        const currentMonthStr = currentDate.toISOString().slice(0, 7); 
+        monthSelector.value = currentMonthStr;
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+        }
+
+        function formatDateVN(dateString) {
+            const d = dateString ? new Date(dateString) : new Date();
+            return d.toLocaleDateString('vi-VN', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        }
+
+        function saveData() {
+            localStorage.setItem('my_debts', JSON.stringify(debts));
+            localStorage.setItem('my_expenses', JSON.stringify(expenses));
+            render();
+        }
+
+        function changeMonth() {
+            render();
+        }
+
+        function addDebt(e) {
+            e.preventDefault();
+            const name = document.getElementById('debtorName').value;
+            const amount = parseFloat(document.getElementById('debtAmount').value);
+            const note = document.getElementById('debtNote').value;
+            const selectedMonth = monthSelector.value;
+            
+            debts.unshift({ 
+                id: Date.now(), 
+                name, 
+                amount, 
+                note, 
+                status: 'unpaid', // Mặc định là chưa trả
+                month: selectedMonth,
+                date: new Date().toISOString() 
+            });
+            document.getElementById('debtForm').reset();
+            saveData();
+        }
+
+        function toggleStatus(id) {
+            debts = debts.map(item => {
+                if (item.id === id) {
+                    item.status = item.status === 'paid' ? 'unpaid' : 'paid';
+                }
+                return item;
+            });
+            saveData();
+        }
+
+        function deleteDebt(id) {
+            debts = debts.filter(item => item.id !== id);
+            saveData();
+        }
+
+        function addExpense(e) {
+            e.preventDefault();
+            const title = document.getElementById('expTitle').value;
+            const amount = parseFloat(document.getElementById('expAmount').value);
+            const selectedMonth = monthSelector.value;
+
+            expenses.unshift({ 
+                id: Date.now(), 
+                title, 
+                amount, 
+                month: selectedMonth,
+                date: new Date().toISOString() 
+            });
+            document.getElementById('expenseForm').reset();
+            saveData();
+        }
+
+        function deleteExpense(id) {
+            expenses = expenses.filter(item => item.id !== id);
+            saveData();
+        }
+
+        function render() {
+            const selectedMonth = monthSelector.value;
+            const [year, month] = selectedMonth.split('-');
+            document.getElementById('labelTotalDebt').innerText = `Tiền còn nợ (Tháng ${month}/${year})`;
+            document.getElementById('labelTotalExp').innerText = `Chi tiêu (Tháng ${month}/${year})`;
+
+            // Render Debts theo tháng chọn
+            const debtContainer = document.getElementById('debtList');
+            debtContainer.innerHTML = '';
+            let totalUnpaidDebt = 0;
+            
+            const filteredDebts = debts.filter(item => item.month === selectedMonth || (!item.month && selectedMonth === currentMonthStr));
+            
+            filteredDebts.forEach(item => {
+                // Chỉ tính tiền vào tổng nợ nếu trạng thái là chưa trả
+                if (item.status !== 'paid') {
+                    totalUnpaidDebt += item.amount;
+                }
+
+                const isPaid = item.status === 'paid';
+                const statusBadge = isPaid 
+                    ? `<span onclick="toggleStatus(${item.id})" class="bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded-lg font-medium cursor-pointer hover:bg-emerald-200 transition"><i class="fa-solid fa-check mr-1"></i>Đã trả</span>`
+                    : `<span onclick="toggleStatus(${item.id})" class="bg-rose-100 text-rose-700 text-xs px-2 py-1 rounded-lg font-medium cursor-pointer hover:bg-rose-200 transition"><i class="fa-solid fa-clock mr-1"></i>Chưa trả</span>`;
+
+                debtContainer.innerHTML += `
+                    <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <p class="font-semibold text-sm text-slate-800">${item.name}</p>
+                                ${statusBadge}
+                            </div>
+                            <p class="text-xs text-rose-500 font-medium">${formatCurrency(item.amount)} ${item.note ? '- ' + item.note : ''}</p>
+                            <p class="text-[11px] text-slate-400">${formatDateVN(item.date)}</p>
+                        </div>
+                        <button onclick="deleteDebt(${item.id})" class="text-slate-400 hover:text-rose-500 transition text-sm p-2"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                `;
+            });
+            document.getElementById('totalDebt').innerText = formatCurrency(totalUnpaidDebt);
+
+            // Render Expenses theo tháng chọn
+            const expContainer = document.getElementById('expenseList');
+            expContainer.innerHTML = '';
+            let totalExpVal = 0;
+
+            const filteredExpenses = expenses.filter(item => item.month === selectedMonth || (!item.month && selectedMonth === currentMonthStr));
+
+            filteredExpenses.forEach(item => {
+                totalExpVal += item.amount;
+                expContainer.innerHTML += `
+                    <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                        <div class="space-y-1">
+                            <p class="font-semibold text-sm text-slate-800">${item.title}</p>
+                            <p class="text-xs text-indigo-600 font-medium">${formatCurrency(item.amount)}</p>
+                            <p class="text-[11px] text-slate-400">${formatDateVN(item.date)}</p>
+                        </div>
+                        <button onclick="deleteExpense(${item.id})" class="text-slate-400 hover:text-rose-500 transition text-sm p-2"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                `;
+            });
+            document.getElementById('totalExpense').innerText = formatCurrency(totalExpVal);
+        }
+
+        function exportData() {
+            const data = { debts, expenses };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup-taichinh-${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.debts && data.expenses) {
+                        debts = data.debts;
+                        expenses = data.expenses;
+                        saveData();
+                        alert('Nhập dữ liệu thành công!');
+                    } else {
+                        alert('File không hợp lệ!');
+                    }
+                } catch (err) {
+                    alert('Lỗi đọc file!');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        render();
+    </script>
 </body>
 </html>
