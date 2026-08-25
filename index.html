@@ -3,38 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản Lý Tài Chính & Doanh Thu</title>
+    <title>Quản Lý Tài Chính & Doanh Thu (Đồng Bộ Cloud)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans">
 
+    <div id="syncStatus" class="fixed top-4 right-4 z-50 bg-slate-800 text-white text-xs px-3 py-1.5 rounded-xl shadow-lg transition-opacity duration-300 opacity-0">
+        Đang đồng bộ...
+    </div>
+
     <div class="max-w-6xl mx-auto p-4 sm:p-6">
-        <!-- Header & Chọn tháng -->
         <header class="mb-6 flex flex-col sm:flex-row justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-slate-100 gap-4">
             <h1 class="text-2xl font-bold text-indigo-600 flex items-center"><i class="fa-solid fa-wallet mr-2"></i>Quản Lý Tài Chính & Doanh Thu</h1>
             
-            <!-- Bộ lọc chọn tháng -->
             <div class="flex items-center gap-2 bg-slate-100 px-3 py-2 rounded-xl">
                 <label for="monthSelector" class="text-sm font-semibold text-slate-600"><i class="fa-solid fa-calendar-days mr-1"></i> Chọn tháng:</label>
                 <input type="month" id="monthSelector" class="bg-white px-2 py-1 rounded-lg text-sm font-medium border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" onchange="changeMonth()">
             </div>
 
             <div class="flex gap-2">
+                <button onclick="fetchDataFromCloud()" class="bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl text-sm font-medium hover:bg-indigo-100 transition"><i class="fa-solid fa-rotate mr-1"></i> Làm mới</button>
                 <button onclick="exportData()" class="bg-emerald-50 text-emerald-600 px-3 py-2 rounded-xl text-sm font-medium hover:bg-emerald-100 transition"><i class="fa-solid fa-download mr-1"></i> Xuất</button>
-                <label class="bg-indigo-50 text-indigo-600 px-3 py-2 rounded-xl text-sm font-medium hover:bg-indigo-100 transition cursor-pointer">
-                    <i class="fa-solid fa-upload mr-1"></i> Nhập <input type="file" id="importFile" class="hidden" onchange="importData(event)">
-                </label>
             </div>
         </header>
 
-        <!-- Thống kê nhanh theo tháng (3 ô) -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
                 <div>
-                    <p class="text-sm text-slate-400 font-medium" id="labelTotalDebt">Tiền cho vay
-
-                    </p>
+                    <p class="text-sm text-slate-400 font-medium" id="labelTotalDebt">Tiền còn nợ</p>
                     <h3 id="totalDebt" class="text-2xl font-bold text-rose-500 mt-1">0 đ</h3>
                 </div>
                 <div class="w-12 h-12 bg-rose-50 text-rose-500 rounded-xl flex items-center justify-center text-xl"><i class="fa-solid fa-hand-holding-dollar"></i></div>
@@ -55,55 +52,114 @@
             </div>
         </div>
 
-        <!-- Main Content Grid (3 cột) -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl"><i class="fa-solid fa-money-bill-wave"></i></div>
+                <div>
+                    <p class="text-sm text-slate-400 font-medium">Tiền mặt ở ngoài (Chưa nạp tài khoản)</p>
+                    <h3 id="cashDisplay" class="text-xl font-bold text-amber-600 mt-0.5">0 đ</h3>
+                </div>
+            </div>
+            <form onsubmit="updateCash(event)" class="flex gap-2 w-full sm:w-auto">
+                <input type="number" id="cashInput" placeholder="Nhập số tiền mặt..." required class="px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm w-full sm:w-48">
+                <button type="submit" class="bg-amber-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-amber-700 transition whitespace-nowrap">Cập nhật</button>
+            </form>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
-            <!-- 1. Quản lý cho mượn -->
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
                 <h2 class="text-lg font-bold mb-4 text-slate-700"><i class="fa-solid fa-users mr-2 text-indigo-500"></i>Cho mượn tiền</h2>
                 <form id="debtForm" onsubmit="addDebt(event)" class="space-y-3 mb-4">
-                    <input type="text" id="debtorName" placeholder="Tên người mượn" required class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-                    <input type="number" id="debtAmount" placeholder="Số tiền (VNĐ)" required class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-                    <input type="text" id="debtNote" placeholder="Ghi chú (VD: Mượn đóng học phí)" class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    <input type="text" id="debtorName" placeholder="Tên người mượn" required class="w-full px-3 py-2 border rounded-xl text-sm">
+                    <input type="number" id="debtAmount" placeholder="Số tiền (VNĐ)" required class="w-full px-3 py-2 border rounded-xl text-sm">
+                    <input type="text" id="debtNote" placeholder="Ghi chú" class="w-full px-3 py-2 border rounded-xl text-sm">
                     <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-xl text-sm font-medium hover:bg-indigo-700 transition">Thêm khoản mượn</button>
                 </form>
                 <div class="overflow-y-auto max-h-60 space-y-2" id="debtList"></div>
             </div>
 
-            <!-- 2. Quản lý chi tiêu -->
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
                 <h2 class="text-lg font-bold mb-4 text-slate-700"><i class="fa-solid fa-receipt mr-2 text-indigo-500"></i>Sổ chi tiêu</h2>
                 <form id="expenseForm" onsubmit="addExpense(event)" class="space-y-3 mb-4">
-                    <input type="text" id="expTitle" placeholder="Tên khoản chi (VD: Ăn sáng...)" required class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
-                    <input type="number" id="expAmount" placeholder="Số tiền (VNĐ)" required class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm">
+                    <input type="text" id="expTitle" placeholder="Tên khoản chi" required class="w-full px-3 py-2 border rounded-xl text-sm">
+                    <input type="number" id="expAmount" placeholder="Số tiền (VNĐ)" required class="w-full px-3 py-2 border rounded-xl text-sm">
                     <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-xl text-sm font-medium hover:bg-indigo-700 transition">Thêm chi tiêu</button>
                 </form>
                 <div class="overflow-y-auto max-h-60 space-y-2" id="expenseList"></div>
             </div>
 
-            <!-- 3. Quản lý doanh thu bán hàng -->
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
                 <h2 class="text-lg font-bold mb-4 text-slate-700"><i class="fa-solid fa-chart-line mr-2 text-emerald-500"></i>Doanh thu bán hàng</h2>
                 <form id="revenueForm" onsubmit="addRevenue(event)" class="space-y-3 mb-4">
-                    <input type="text" id="revTitle" placeholder="Tên đơn hàng / Dịch vụ..." required class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
-                    <input type="number" id="revAmount" placeholder="Số tiền thu được (VNĐ)" required class="w-full px-3 py-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm">
+                    <input type="text" id="revTitle" placeholder="Tên đơn hàng" required class="w-full px-3 py-2 border rounded-xl text-sm">
+                    <input type="number" id="revAmount" placeholder="Số tiền thu được" required class="w-full px-3 py-2 border rounded-xl text-sm">
                     <button type="submit" class="w-full bg-emerald-600 text-white py-2 rounded-xl text-sm font-medium hover:bg-emerald-700 transition">Thêm doanh thu</button>
                 </form>
                 <div class="overflow-y-auto max-h-60 space-y-2" id="revenueList"></div>
             </div>
-
         </div>
     </div>
 
     <script>
-        let debts = JSON.parse(localStorage.getItem('my_debts')) || [];
-        let expenses = JSON.parse(localStorage.getItem('my_expenses')) || [];
-        let revenues = JSON.parse(localStorage.getItem('my_revenues')) || [];
+        // DÁN LINK GOOGLE APPS SCRIPT WEB APP URL VÀO ĐÂY:
+        const SCRIPT_URL = 'DÁN_LINK_WEB_APP_URL_VÀO_ĐÂY';
+
+        let debts = [];
+        let expenses = [];
+        let revenues = [];
+        let cashBalance = 0;
 
         const monthSelector = document.getElementById('monthSelector');
         const currentDate = new Date();
         const currentMonthStr = currentDate.toISOString().slice(0, 7); 
         monthSelector.value = currentMonthStr;
+
+        function showStatus(text, isError = false) {
+            const el = document.getElementById('syncStatus');
+            el.innerText = text;
+            el.className = `fixed top-4 right-4 z-50 text-white text-xs px-3 py-1.5 rounded-xl shadow-lg transition-opacity duration-300 opacity-100 ${isError ? 'bg-rose-600' : 'bg-slate-800'}`;
+            setTimeout(() => { el.classList.add('opacity-0'); }, 2000);
+        }
+
+        // Tải dữ liệu từ Google Sheets lên Web
+        async function fetchDataFromCloud() {
+            if (SCRIPT_URL.includes('DÁN_LINK')) {
+                render();
+                return;
+            }
+            showStatus('Đang tải dữ liệu...');
+            try {
+                const response = await fetch(`${SCRIPT_URL}?action=getData`);
+                const data = await response.json();
+                debts = data.debts || [];
+                expenses = data.expenses || [];
+                revenues = data.revenues || [];
+                cashBalance = data.cashBalance || 0;
+                render();
+                showStatus('Đã đồng bộ xong!');
+            } catch (err) {
+                showStatus('Lỗi tải dữ liệu!', true);
+                render();
+            }
+        }
+
+        // Lưu dữ liệu tự động lên Google Sheets
+        async function saveDataToCloud() {
+            if (SCRIPT_URL.includes('DÁN_LINK')) return;
+            showStatus('Đang lưu...');
+            try {
+                const payload = { debts, expenses, revenues, cashBalance };
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                showStatus('Đã lưu lên Cloud!');
+            } catch (err) {
+                showStatus('Lỗi lưu dữ liệu!', true);
+            }
+        }
 
         function formatCurrency(amount) {
             return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
@@ -111,39 +167,32 @@
 
         function formatDateVN(dateString) {
             const d = dateString ? new Date(dateString) : new Date();
-            return d.toLocaleDateString('vi-VN', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-            });
+            return d.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         }
 
         function saveData() {
-            localStorage.setItem('my_debts', JSON.stringify(debts));
-            localStorage.setItem('my_expenses', JSON.stringify(expenses));
-            localStorage.setItem('my_revenues', JSON.stringify(revenues));
             render();
+            saveDataToCloud();
         }
 
-        function changeMonth() {
-            render();
+        function updateCash(e) {
+            e.preventDefault();
+            cashBalance = parseFloat(document.getElementById('cashInput').value);
+            document.getElementById('cashInput').value = '';
+            saveData();
         }
+
+        function changeMonth() { render(); }
 
         function addDebt(e) {
             e.preventDefault();
-            const name = document.getElementById('debtorName').value;
-            const amount = parseFloat(document.getElementById('debtAmount').value);
-            const note = document.getElementById('debtNote').value;
-            const selectedMonth = monthSelector.value;
-            
             debts.unshift({ 
                 id: Date.now(), 
-                name, 
-                amount, 
-                note, 
+                name: document.getElementById('debtorName').value, 
+                amount: parseFloat(document.getElementById('debtAmount').value), 
+                note: document.getElementById('debtNote').value, 
                 status: 'unpaid', 
-                month: selectedMonth,
+                month: monthSelector.value,
                 date: new Date().toISOString() 
             });
             document.getElementById('debtForm').reset();
@@ -152,9 +201,7 @@
 
         function toggleStatus(id) {
             debts = debts.map(item => {
-                if (item.id === id) {
-                    item.status = item.status === 'paid' ? 'unpaid' : 'paid';
-                }
+                if (item.id === id) item.status = item.status === 'paid' ? 'unpaid' : 'paid';
                 return item;
             });
             saveData();
@@ -167,15 +214,11 @@
 
         function addExpense(e) {
             e.preventDefault();
-            const title = document.getElementById('expTitle').value;
-            const amount = parseFloat(document.getElementById('expAmount').value);
-            const selectedMonth = monthSelector.value;
-
             expenses.unshift({ 
                 id: Date.now(), 
-                title, 
-                amount, 
-                month: selectedMonth,
+                title: document.getElementById('expTitle').value, 
+                amount: parseFloat(document.getElementById('expAmount').value), 
+                month: monthSelector.value,
                 date: new Date().toISOString() 
             });
             document.getElementById('expenseForm').reset();
@@ -189,15 +232,11 @@
 
         function addRevenue(e) {
             e.preventDefault();
-            const title = document.getElementById('revTitle').value;
-            const amount = parseFloat(document.getElementById('revAmount').value);
-            const selectedMonth = monthSelector.value;
-
             revenues.unshift({ 
                 id: Date.now(), 
-                title, 
-                amount, 
-                month: selectedMonth,
+                title: document.getElementById('revTitle').value, 
+                amount: parseFloat(document.getElementById('revAmount').value), 
+                month: monthSelector.value,
                 date: new Date().toISOString() 
             });
             document.getElementById('revenueForm').reset();
@@ -212,46 +251,39 @@
         function render() {
             const selectedMonth = monthSelector.value;
             const [year, month] = selectedMonth.split('-');
-            document.getElementById('labelTotalDebt').innerText = `Tiền cho vay (T${month}/${year})`;
+            document.getElementById('labelTotalDebt').innerText = `Tiền còn nợ (T${month}/${year})`;
             document.getElementById('labelTotalExp').innerText = `Chi tiêu (T${month}/${year})`;
             document.getElementById('labelTotalRev').innerText = `Doanh thu (T${month}/${year})`;
+            document.getElementById('cashDisplay').innerText = formatCurrency(cashBalance);
 
-            // 1. Render Debts
+            // Render Debts
             const debtContainer = document.getElementById('debtList');
             debtContainer.innerHTML = '';
             let totalUnpaidDebt = 0;
-            const filteredDebts = debts.filter(item => item.month === selectedMonth || (!item.month && selectedMonth === currentMonthStr));
-            
-            filteredDebts.forEach(item => {
+            debts.filter(item => item.month === selectedMonth || (!item.month && selectedMonth === currentMonthStr)).forEach(item => {
                 if (item.status !== 'paid') totalUnpaidDebt += item.amount;
                 const isPaid = item.status === 'paid';
                 const statusBadge = isPaid 
-                    ? `<span onclick="toggleStatus(${item.id})" class="bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded-lg font-medium cursor-pointer hover:bg-emerald-200 transition"><i class="fa-solid fa-check mr-1"></i>Đã trả</span>`
-                    : `<span onclick="toggleStatus(${item.id})" class="bg-rose-100 text-rose-700 text-xs px-2 py-1 rounded-lg font-medium cursor-pointer hover:bg-rose-200 transition"><i class="fa-solid fa-clock mr-1"></i>Chưa trả</span>`;
+                    ? `<span onclick="toggleStatus(${item.id})" class="bg-emerald-100 text-emerald-700 text-xs px-2 py-1 rounded-lg font-medium cursor-pointer"><i class="fa-solid fa-check mr-1"></i>Đã trả</span>`
+                    : `<span onclick="toggleStatus(${item.id})" class="bg-rose-100 text-rose-700 text-xs px-2 py-1 rounded-lg font-medium cursor-pointer"><i class="fa-solid fa-clock mr-1"></i>Chưa trả</span>`;
 
                 debtContainer.innerHTML += `
                     <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <div class="space-y-1">
-                            <div class="flex items-center gap-2">
-                                <p class="font-semibold text-sm text-slate-800">${item.name}</p>
-                                ${statusBadge}
-                            </div>
+                            <div class="flex items-center gap-2"><p class="font-semibold text-sm text-slate-800">${item.name}</p>${statusBadge}</div>
                             <p class="text-xs text-rose-500 font-medium">${formatCurrency(item.amount)} ${item.note ? '- ' + item.note : ''}</p>
                             <p class="text-[11px] text-slate-400">${formatDateVN(item.date)}</p>
                         </div>
                         <button onclick="deleteDebt(${item.id})" class="text-slate-400 hover:text-rose-500 transition text-sm p-2"><i class="fa-solid fa-trash-can"></i></button>
-                    </div>
-                `;
+                    </div>`;
             });
             document.getElementById('totalDebt').innerText = formatCurrency(totalUnpaidDebt);
 
-            // 2. Render Expenses
+            // Render Expenses
             const expContainer = document.getElementById('expenseList');
             expContainer.innerHTML = '';
             let totalExpVal = 0;
-            const filteredExpenses = expenses.filter(item => item.month === selectedMonth || (!item.month && selectedMonth === currentMonthStr));
-
-            filteredExpenses.forEach(item => {
+            expenses.filter(item => item.month === selectedMonth || (!item.month && selectedMonth === currentMonthStr)).forEach(item => {
                 totalExpVal += item.amount;
                 expContainer.innerHTML += `
                     <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
@@ -261,18 +293,15 @@
                             <p class="text-[11px] text-slate-400">${formatDateVN(item.date)}</p>
                         </div>
                         <button onclick="deleteExpense(${item.id})" class="text-slate-400 hover:text-rose-500 transition text-sm p-2"><i class="fa-solid fa-trash-can"></i></button>
-                    </div>
-                `;
+                    </div>`;
             });
             document.getElementById('totalExpense').innerText = formatCurrency(totalExpVal);
 
-            // 3. Render Revenues
+            // Render Revenues
             const revContainer = document.getElementById('revenueList');
             revContainer.innerHTML = '';
             let totalRevVal = 0;
-            const filteredRevenues = revenues.filter(item => item.month === selectedMonth || (!item.month && selectedMonth === currentMonthStr));
-
-            filteredRevenues.forEach(item => {
+            revenues.filter(item => item.month === selectedMonth || (!item.month && selectedMonth === currentMonthStr)).forEach(item => {
                 totalRevVal += item.amount;
                 revContainer.innerHTML += `
                     <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
@@ -282,14 +311,13 @@
                             <p class="text-[11px] text-slate-400">${formatDateVN(item.date)}</p>
                         </div>
                         <button onclick="deleteRevenue(${item.id})" class="text-slate-400 hover:text-rose-500 transition text-sm p-2"><i class="fa-solid fa-trash-can"></i></button>
-                    </div>
-                `;
+                    </div>`;
             });
             document.getElementById('totalRevenue').innerText = formatCurrency(totalRevVal);
         }
 
         function exportData() {
-            const data = { debts, expenses, revenues };
+            const data = { debts, expenses, revenues, cashBalance };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -298,30 +326,8 @@
             a.click();
         }
 
-        function importData(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    if (data.debts && data.expenses) {
-                        debts = data.debts;
-                        expenses = data.expenses;
-                        revenues = data.revenues || [];
-                        saveData();
-                        alert('Nhập dữ liệu thành công!');
-                    } else {
-                        alert('File không hợp lệ!');
-                    }
-                } catch (err) {
-                    alert('Lỗi đọc file!');
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        render();
+        // Tự động tải dữ liệu từ Google Sheets khi vừa mở trang web lên
+        fetchDataFromCloud();
     </script>
 </body>
 </html>
