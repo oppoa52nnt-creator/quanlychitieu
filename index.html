@@ -28,6 +28,15 @@
             </div>
         </header>
 
+        <!-- Thêm ô Tổng tài sản lên đầu -->
+        <div class="bg-gradient-to-r from-indigo-500 to-violet-600 p-5 rounded-2xl shadow-sm text-white mb-4 flex items-center justify-between">
+            <div>
+                <p class="text-sm text-indigo-100 font-medium">Tổng tài sản (Doanh thu + Tiền mặt)</p>
+                <h3 id="totalAssets" class="text-3xl font-extrabold mt-1">0 đ</h3>
+            </div>
+            <div class="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center text-2xl text-white"><i class="fa-solid fa-vault"></i></div>
+        </div>
+
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center justify-between">
                 <div>
@@ -311,6 +320,10 @@
                     </div>`;
             });
             document.getElementById('totalRevenue').innerText = formatCurrency(totalRevVal);
+
+            // Tính và hiển thị Tổng tài sản = Doanh thu + Tiền mặt ở ngoài
+            const totalAssetsVal = totalRevVal + cashBalance;
+            document.getElementById('totalAssets').innerText = formatCurrency(totalAssetsVal);
         }
 
         function exportData() {
