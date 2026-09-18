@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="vi">a
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -128,7 +128,7 @@
         </div>
     </div>
 
-    <script>
+    <script type="text/plain">
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbysvNU_faY9efFydCiDINrQVMD5htcNcIFklEV3MN5DEHbe0hAkPYlsSE2f8d259DM/exec'
 
         let debts = [];
@@ -502,6 +502,173 @@
             URL.revokeObjectURL(url);
         }
 
+        fetchDataFromCloud();
+    </script>
+
+    <!-- Script hoạt động: dùng text/plain khi POST để tránh lỗi CORS preflight của Google Apps Script. -->
+    <script>
+        const ACTIVE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbysvNU_faY9efFydCiDINrQVMD5htcNcIFklEV3MN5DEHbe0hAkPYlsSE2f8d259DM/exec';
+        let debts = [];
+        let expenses = [];
+        let revenues = [];
+        let cashBalance = 0;
+        let bankBalance = 0;
+
+        const monthSelector = document.getElementById('monthSelector');
+        const currentMonthStr = new Date().toISOString().slice(0, 7);
+        monthSelector.value = monthSelector.value || currentMonthStr;
+
+        function showStatus(text, isError = false) {
+            const el = document.getElementById('syncStatus');
+            el.innerText = text;
+            el.className = `fixed top-4 right-4 z-50 text-white text-xs px-3 py-1.5 rounded-xl shadow-lg transition-opacity duration-300 opacity-100 ${isError ? 'bg-rose-600' : 'bg-slate-800'}`;
+            setTimeout(() => el.classList.add('opacity-0'), 2500);
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Number(amount) || 0);
+        }
+
+        function formatDateVN(value) {
+            const date = value ? new Date(value) : new Date();
+            return date.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        }
+
+        function visibleItems(items) {
+            const selectedMonth = monthSelector.value;
+            return items.filter(item => item.month === selectedMonth || (!item.month && selectedMonth === currentMonthStr));
+        }
+
+        async function fetchDataFromCloud() {
+            showStatus('Đang tải dữ liệu...');
+            try {
+                const response = await fetch(`${ACTIVE_SCRIPT_URL}?action=getData&t=${Date.now()}`, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                debts = Array.isArray(data.debts) ? data.debts : [];
+                expenses = Array.isArray(data.expenses) ? data.expenses : [];
+                revenues = Array.isArray(data.revenues) ? data.revenues : [];
+                cashBalance = Number(data.cashBalance) || 0;
+                bankBalance = Number(data.bankBalance) || 0;
+                render();
+                showStatus('Đã đồng bộ xong!');
+            } catch (error) {
+                console.error('Không tải được dữ liệu:', error);
+                showStatus('Lỗi tải dữ liệu!', true);
+                render();
+            }
+        }
+
+        async function saveDataToCloud() {
+            const payload = JSON.stringify({ debts, expenses, revenues, cashBalance, bankBalance });
+            showStatus('Đang lưu...');
+            try {
+                // text/plain là request đơn giản, không phát sinh CORS preflight.
+                await fetch(ACTIVE_SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: payload
+                });
+                showStatus('Đã gửi dữ liệu lên Google Sheet!');
+            } catch (error) {
+                console.error('Không lưu được dữ liệu:', error);
+                showStatus('Lỗi lưu dữ liệu!', true);
+            }
+        }
+
+        function saveData() {
+            render();
+            saveDataToCloud();
+        }
+
+        function updateCash(event) {
+            event.preventDefault();
+            cashBalance = Number(document.getElementById('cashInput').value) || 0;
+            document.getElementById('cashInput').value = '';
+            saveData();
+        }
+
+        function updateBank(event) {
+            event.preventDefault();
+            bankBalance = Number(document.getElementById('bankInput').value) || 0;
+            document.getElementById('bankInput').value = '';
+            saveData();
+        }
+
+        function changeMonth() { render(); }
+
+        function addDebt(event) {
+            event.preventDefault();
+            debts.unshift({ id: Date.now(), name: document.getElementById('debtorName').value, amount: Number(document.getElementById('debtAmount').value) || 0, note: document.getElementById('debtNote').value, status: 'unpaid', month: monthSelector.value, date: new Date().toISOString() });
+            document.getElementById('debtForm').reset();
+            saveData();
+        }
+
+        function toggleStatus(id) {
+            debts = debts.map(item => item.id === id ? { ...item, status: item.status === 'paid' ? 'unpaid' : 'paid' } : item);
+            saveData();
+        }
+
+        function deleteDebt(id) { debts = debts.filter(item => item.id !== id); saveData(); }
+
+        function addExpense(event) {
+            event.preventDefault();
+            expenses.unshift({ id: Date.now(), title: document.getElementById('expTitle').value, amount: Number(document.getElementById('expAmount').value) || 0, month: monthSelector.value, date: new Date().toISOString() });
+            document.getElementById('expenseForm').reset();
+            saveData();
+        }
+
+        function deleteExpense(id) { expenses = expenses.filter(item => item.id !== id); saveData(); }
+
+        function addRevenue(event) {
+            event.preventDefault();
+            revenues.unshift({ id: Date.now(), title: document.getElementById('revTitle').value, amount: Number(document.getElementById('revAmount').value) || 0, month: monthSelector.value, date: new Date().toISOString() });
+            document.getElementById('revenueForm').reset();
+            saveData();
+        }
+
+        function deleteRevenue(id) { revenues = revenues.filter(item => item.id !== id); saveData(); }
+
+        function render() {
+            const [year, month] = monthSelector.value.split('-');
+            document.getElementById('labelTotalDebt').innerText = `Tiền đang cho vay (T${month}/${year})`;
+            document.getElementById('labelTotalExp').innerText = `Chi tiêu (T${month}/${year})`;
+            document.getElementById('labelTotalRev').innerText = `Doanh thu (T${month}/${year})`;
+            document.getElementById('cashDisplay').innerText = formatCurrency(cashBalance);
+            document.getElementById('bankDisplay').innerText = formatCurrency(bankBalance);
+
+            const selectedDebts = visibleItems(debts);
+            document.getElementById('debtList').innerHTML = selectedDebts.map(item => `
+                <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100">
+                    <div class="space-y-1"><div class="flex items-center gap-2"><p class="font-semibold text-sm">${item.name}</p><span onclick="toggleStatus(${item.id})" class="${item.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'} text-xs px-2 py-1 rounded-lg cursor-pointer">${item.status === 'paid' ? 'Đã trả' : 'Chưa trả'}</span></div><p class="text-xs text-rose-500 font-medium">${formatCurrency(item.amount)} ${item.note ? '- ' + item.note : ''}</p><p class="text-[11px] text-slate-400">${formatDateVN(item.date)}</p></div>
+                    <button onclick="deleteDebt(${item.id})" class="text-slate-400 hover:text-rose-500 p-2"><i class="fa-solid fa-trash-can"></i></button>
+                </div>`).join('');
+            document.getElementById('totalDebt').innerText = formatCurrency(selectedDebts.filter(item => item.status !== 'paid').reduce((sum, item) => sum + Number(item.amount || 0), 0));
+
+            const selectedExpenses = visibleItems(expenses);
+            document.getElementById('expenseList').innerHTML = selectedExpenses.map(item => `<div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100"><div><p class="font-semibold text-sm">${item.title}</p><p class="text-xs text-indigo-600 font-medium">${formatCurrency(item.amount)}</p><p class="text-[11px] text-slate-400">${formatDateVN(item.date)}</p></div><button onclick="deleteExpense(${item.id})" class="text-slate-400 hover:text-rose-500 p-2"><i class="fa-solid fa-trash-can"></i></button></div>`).join('');
+            const totalExpense = selectedExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+            document.getElementById('totalExpense').innerText = formatCurrency(totalExpense);
+
+            const selectedRevenues = visibleItems(revenues);
+            document.getElementById('revenueList').innerHTML = selectedRevenues.map(item => `<div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100"><div><p class="font-semibold text-sm">${item.title}</p><p class="text-xs text-emerald-600 font-medium">${formatCurrency(item.amount)}</p><p class="text-[11px] text-slate-400">${formatDateVN(item.date)}</p></div><button onclick="deleteRevenue(${item.id})" class="text-slate-400 hover:text-rose-500 p-2"><i class="fa-solid fa-trash-can"></i></button></div>`).join('');
+            const totalRevenue = selectedRevenues.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+            document.getElementById('totalRevenue').innerText = formatCurrency(totalRevenue);
+            document.getElementById('totalAssets').innerText = formatCurrency(cashBalance + bankBalance);
+        }
+
+        function exportData() {
+            const blob = new Blob([JSON.stringify({ debts, expenses, revenues, cashBalance, bankBalance }, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `backup-taichinh-${new Date().toISOString().slice(0, 10)}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+
+        render();
         fetchDataFromCloud();
     </script>
 </body>
